@@ -8,7 +8,42 @@ namespace Telnet
 {
 	public abstract class Telnet
 	{
-		protected Encoding Enc = ASCIIEncoding.ASCII;
+
+        /// <summary>
+        /// Fired after a readhas completed successfully.
+        /// </summary>
+        public event EventHandler<ReadCompletedEventArgs> ReadCompleted;
+
+        /// <summary>
+        /// Fired before a send is started. It may or may not have succeeded.
+        /// </summary>
+        public event EventHandler<SendStartedEventArgs> SendStarted;
+
+		public class MessageEventArgs : EventArgs
+        {
+			public readonly string Message;
+
+			public MessageEventArgs(string msg)
+			{
+				Message = msg;
+			}
+		}
+
+		public class SendStartedEventArgs : MessageEventArgs
+		{
+			public SendStartedEventArgs(string msg) : base(msg)
+            {
+            }
+		}
+
+        public class ReadCompletedEventArgs : MessageEventArgs
+		{
+			public ReadCompletedEventArgs(string msg) : base(msg)
+			{
+			}
+		}
+
+        protected Encoding Enc = ASCIIEncoding.ASCII;
 		protected TimeSpan WriteDelay = TimeSpan.FromMilliseconds(10);
 		protected TimeSpan ReadDelay = TimeSpan.FromMilliseconds(100);
         protected TimeSpan ReadNotEmptyTimeout = TimeSpan.FromMilliseconds(100);
@@ -66,6 +101,7 @@ namespace Telnet
 
 		protected bool WriteEOL (NetworkStream stream)
 		{
+			OnSendStarted("<EOL>");
 			switch (EOL)
 			{
 				case EOLType.CRLF:
@@ -81,6 +117,7 @@ namespace Telnet
 
 		protected bool WriteBySymbol (NetworkStream stream, string cmd)
 		{
+			OnSendStarted(cmd);
 			foreach (var c in cmd)
 			{
 				if (!Write(stream, c.ToString()))
@@ -106,6 +143,7 @@ namespace Telnet
             for (int i = 0; (i < ReadNotEmptyTimeout.TotalMilliseconds) && (stream != null ? stream.CanRead : false) && string.IsNullOrEmpty(s = Read(stream, readline)); i++)
                 Thread.Sleep(1);
 
+			OnReadCompleted(s);
             return s;
 		}
 		
@@ -122,11 +160,15 @@ namespace Telnet
                 var buff = sb.ToString().Split(new char[] { (char)CR, (char)LF, (char)NUL, '\r', '\n', '>' }, StringSplitOptions.RemoveEmptyEntries);
 
                 if (buff.Length > 0)
-                    return buff[buff.Length - 1];
-                else
+                {
+					string s = buff[buff.Length - 1];
+					OnReadCompleted(s);
+				}
+				else
                     return "";
             }
 
+			OnReadCompleted(sb.ToString());
 			return sb.ToString();
 		}
 		
@@ -176,6 +218,26 @@ namespace Telnet
 				Thread.Sleep(ReadDelay);
 			}
 			while (stream.DataAvailable);
+		}
+
+		protected virtual void OnSendStarted(string msg)
+		{
+			EventHandler<SendStartedEventArgs> handler = SendStarted;
+			if (handler != null)
+			{
+				var e = new SendStartedEventArgs(msg);
+				handler(this, e);
+			}
+		}
+
+		protected virtual void OnReadCompleted(string msg)
+		{
+			EventHandler<ReadCompletedEventArgs> handler = ReadCompleted;
+			if (handler != null)
+			{
+				var e = new ReadCompletedEventArgs(msg);
+				handler(this, e);
+			}
 		}
 	}
 }

@@ -8,7 +8,7 @@
     <OutputType>Library</OutputType>
     <RootNamespace>cs_telnet</RootNamespace>
     <AssemblyName>cs-telnet</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <TargetFrameworkProfile />
     <NoWin32Manifest>False</NoWin32Manifest>
